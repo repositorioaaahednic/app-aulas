@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel de Aulas e Faltas</title>
+
+<style>
+:root{
+  --bg:#0f172a;
+  --card:#1e293b;
+  --muted:#cbd5e1;
+}
+
+*{box-sizing:border-box;}
+
+body{
+  font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;
+  background:var(--bg);
+  color:white;
+  margin:0;
+  padding:12px;
+}
+
+h1{
+  text-align:center;
+  font-size:20px;
+  margin:8px 0 16px;
+}
+
+/* ===== TABS ===== */
+.tabs{
+  display:flex;
+  gap:8px;
+  margin-bottom:14px;
+}
+
+.tab-btn{
+  flex:1;
+  padding:12px;
+  border:none;
+  border-radius:12px;
+  cursor:pointer;
+  font-weight:600;
+  background:#1e293b;
+  color:white;
+  font-size:14px;
+}
+
+.tab-btn.active{background:#3b82f6;}
+
+/* ===== LISTA ===== */
+.container{
+  max-width:520px;
+  margin:auto;
+}
+
+.card{
+  background:var(--card);
+  padding:14px;
+  border-radius:16px;
+  margin-bottom:12px;
+  box-shadow:0 6px 18px rgba(0,0,0,.25);
+}
+
+.topo{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+}
+
+.topo strong{
+  font-size:15px;
+}
+
+button{
+  padding:8px 12px;
+  border:none;
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:bold;
+  font-size:14px;
+}
+
+.add{background:#22c55e;color:white;}
+.remove{background:#ef4444;color:white;}
+
+.progress{
+  height:12px;
+  background:#334155;
+  border-radius:10px;
+  margin-top:10px;
+  overflow:hidden;
+}
+
+.bar{
+  height:100%;
+  border-radius:10px;
+  transition:.25s;
+}
+
+.info{
+  font-size:13px;
+  margin-top:6px;
+  color:var(--muted);
+  line-height:1.4;
+}
+
+.input-faltas{
+  width:100%;
+  padding:10px;
+  border-radius:10px;
+  border:none;
+  margin-top:6px;
+  font-size:14px;
+}
+
+.status-ok{color:#22c55e;font-weight:bold;margin-top:6px;}
+.status-bad{color:#ef4444;font-weight:bold;margin-top:6px;}
+
+/* ===== MOBILE APP FEEL ===== */
+@media (min-width:700px){
+  body{padding:24px;}
+  h1{font-size:24px;}
+}
+</style>
+</head>
+
+<body>
+<h1>📊 Controle Escolar</h1>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="trocarAba('aulas', this)">📚 Aulas</button>
+  <button class="tab-btn" onclick="trocarAba('faltas', this)">🚫 Faltas</button>
+</div>
+
+<div class="container" id="conteudo"></div>
+
+<script>
+// ===== DADOS BASE (ZERADOS PARA O ALUNO) =====
+const base = [
+ {nome:"Desenvolvimento Web", total:120, dadas:0, faltas:0, cor:"#3b82f6"},
+ {nome:"Estágio/TCC", total:100, dadas:0, faltas:0, cor:"#22c55e"},
+ {nome:"Estrutura de Dados", total:120, dadas:0, faltas:0, cor:"#a855f7"},
+ {nome:"Filosofia", total:80, dadas:0, faltas:0, cor:"#f59e0b"},
+ {nome:"Física", total:80, dadas:0, faltas:0, cor:"#ef4444"},
+ {nome:"Linguagem de Programação II", total:80, dadas:0, faltas:0, cor:"#06b6d4"},
+ {nome:"Português", total:120, dadas:0, faltas:0, cor:"#6366f1"},
+ {nome:"Matemática", total:80, dadas:0, faltas:0, cor:"#eab308"},
+ {nome:"Organização/Empreendedorismo", total:160, dadas:0, faltas:0, cor:"#14b8a6"},
+ {nome:"Prática Profissional", total:80, dadas:0, faltas:0, cor:"#f97316"},
+ {nome:"Redes de Computadores", total:160, dadas:0, faltas:0, cor:"#10b981"},
+ {nome:"Segurança/Meio Ambiente", total:80, dadas:0, faltas:0, cor:"#8b5cf6"},
+ {nome:"Sociologia", total:80, dadas:0, faltas:0, cor:"#ec4899"},
+];
+
+let materias = JSON.parse(localStorage.getItem("materias_full")) || base;
+let abaAtual = "aulas";
+
+function salvar(){
+  localStorage.setItem("materias_full", JSON.stringify(materias));
+}
+
+function trocarAba(aba, el){
+  abaAtual = aba;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
+
+function render(){
+  const cont = document.getElementById("conteudo");
+  cont.innerHTML = "";
+
+  materias.forEach((m,i)=>{
+    const card = document.createElement("div");
+    card.className="card";
+
+    // ===== ABA AULAS =====
+    if(abaAtual === "aulas"){
+      const faltam = Math.max(0, m.total - m.dadas);
+      const pct = Math.min(100,(m.dadas/m.total)*100);
+
+      card.innerHTML = `
+        <div class="topo">
+          <strong>${m.nome}</strong>
+          <div>
+            <button class="remove" onclick="remAula(${i})">−</button>
+            <button class="add" onclick="addAula(${i})">+</button>
+          </div>
+        </div>
+        <div class="info">📚 ${m.dadas}/${m.total} • faltam ${faltam}</div>
+        <div class="progress">
+          <div class="bar" style="width:${pct}%;background:${m.cor}"></div>
+        </div>
+      `;
+    }
+
+    // ===== ABA FALTAS =====
+    if(abaAtual === "faltas"){
+      const maxFaltas = Math.floor(m.total * 0.25);
+      const situacao = m.faltas <= maxFaltas;
+
+      card.innerHTML = `
+        <div class="topo">
+          <strong>${m.nome}</strong>
+        </div>
+        <div class="info">
+          Faltas atuais: <b>${m.faltas}</b><br>
+          Máximo permitido (75% presença): <b>${maxFaltas}</b>
+        </div>
+        <input class="input-faltas" type="number" min="0" value="${m.faltas}" onchange="setFaltas(${i}, this.value)">
+        <div class="${situacao ? 'status-ok':'status-bad'}">
+          ${situacao ? '✅ Dentro do limite' : '❌ REPROVADO POR FALTA'}
+        </div>
+      `;
+    }
+
+    cont.appendChild(card);
+  });
+
+  salvar();
+}
+
+function addAula(i){
+  if(materias[i].dadas < materias[i].total){
+    materias[i].dadas++;
+    render();
+  }
+}
+
+function remAula(i){
+  if(materias[i].dadas>0){
+    materias[i].dadas--;
+    render();
+  }
+}
+
+function setFaltas(i,val){
+  materias[i].faltas = Number(val);
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
